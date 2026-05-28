@@ -63,6 +63,7 @@ jobs:
           firebase deploy \
             --project ${{ secrets.VITE_FIREBASE_PROJECT_ID }} \
             --non-interactive
+            --force
 
       - name: Remove service account key
         if: always()
