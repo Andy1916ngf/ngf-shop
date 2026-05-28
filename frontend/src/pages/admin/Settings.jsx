@@ -137,6 +137,7 @@ export default function Settings() {
   function removeSize(s) {
     setConfig(c => ({ ...c, sizes: (c.sizes || []).filter(x => x !== s) }));
   }
+    return (
     <div style={sp.page}>
       <h1 style={sp.pageTitle}>Inställningar</h1>
 
