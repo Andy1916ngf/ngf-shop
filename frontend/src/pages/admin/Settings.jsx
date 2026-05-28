@@ -552,7 +552,7 @@ export default function Settings() {
         <div style={sp.card}>
           <p style={sp.cardTitle}>Adminroller</p>
           <p style={{ ...sp.hint, marginBottom: 16 }}>
-            Alla Google-konton kan läggas till — ingen domänbegränsning.
+            Endast @nynashamnsgf.se-konton kan logga in i adminpanelen.
           </p>
 
           {/* Site admins */}
