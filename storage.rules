@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Product images: public read; uploads only via signed URL from Cloud Function
+    match /products/{allPaths=**} {
+      allow read:  if true;
+      allow write: if false;
+    }
+
+    // Block all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

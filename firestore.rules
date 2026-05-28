@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────
+
+    // Checks the custom claim set by the getRole Cloud Function.
+    // The claim lives in the JWT — no extra database read required.
+    function isNgfAdmin() {
+      return request.auth != null
+        && request.auth.token.get('ngfRole', null) != null
+        && request.auth.token.email.matches('.*@nynashamnsgf\\.se');
+    }
+
+    function isSiteAdmin() {
+      return isNgfAdmin() && request.auth.token.ngfRole == 'siteAdmin';
+    }
+
+    // ── Products ──────────────────────────────────────────────
+    // Public: visible products only. All writes via Cloud Functions.
+    match /products/{id} {
+      allow read:  if resource.data.visible == true;
+      allow write: if false;
+    }
+
+    // ── Orders ────────────────────────────────────────────────
+    // Option A: authenticated NGF admins can read; all writes via Cloud Functions.
+    match /orders/{id} {
+      allow read:  if isNgfAdmin();
+      allow write: if false;
+    }
+
+    match /orders/{id}/events/{eventId} {
+      allow read:  if isNgfAdmin();
+      allow write: if false;
+    }
+
+    // ── Coupons ───────────────────────────────────────────────
+    match /coupons/{id} {
+      allow read, write: if false;
+    }
+
+    // ── Static page content ───────────────────────────────────
+    match /content/{page} {
+      allow read:  if true;
+      allow write: if false;
+    }
+
+    // ── Site config (hero, currency, maintenance mode) ────────
+    match /config/{doc} {
+      allow read:  if true;
+      allow write: if false;
+    }
+
+    // ── Mail queue (Firebase Trigger Email extension) ─────────
+    match /mail/{id} {
+      allow read, write: if false;
+    }
+  }
+}
