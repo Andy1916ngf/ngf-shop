@@ -4,27 +4,26 @@ service cloud.firestore {
 
     // ── Helper functions ──────────────────────────────────────
 
-    // Checks the custom claim set by the getRole Cloud Function.
+    // Checks the ngfRole custom claim set by the getRole Cloud Function.
     // The claim lives in the JWT — no extra database read required.
+    // No domain restriction — access is controlled by config/adminRoles.
     function isNgfAdmin() {
       return request.auth != null
-        && request.auth.token.get('ngfRole', null) != null
-        && request.auth.token.email.matches('.*@nynashamnsgf\\.se');
+        && request.auth.token.get('ngfRole', null) != null;
     }
 
     function isSiteAdmin() {
-      return isNgfAdmin() && request.auth.token.ngfRole == 'siteAdmin';
+      return isNgfAdmin()
+        && request.auth.token.ngfRole == 'siteAdmin';
     }
 
     // ── Products ──────────────────────────────────────────────
-    // Public: visible products only. All writes via Cloud Functions.
     match /products/{id} {
-      allow read:  if resource.data.visible == true;
+      allow read:  if resource.data.visible == true || isNgfAdmin();
       allow write: if false;
     }
 
     // ── Orders ────────────────────────────────────────────────
-    // Option A: authenticated NGF admins can read; all writes via Cloud Functions.
     match /orders/{id} {
       allow read:  if isNgfAdmin();
       allow write: if false;
@@ -46,10 +45,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── Site config (hero, currency, maintenance mode) ────────
-    match /config/{doc} {
+    // ── Site config (hero, variants, maintenance, shipping) ───
+    // Public read for hero/maintenance. Admin write via Cloud Functions.
+    match /config/site {
       allow read:  if true;
       allow write: if false;
+    }
+
+    // ── Admin roles ───────────────────────────────────────────
+    // Only admins can read; only siteAdmins can write.
+    // Written directly by Settings page (no Cloud Function proxy needed).
+    match /config/adminRoles {
+      allow read:  if isNgfAdmin();
+      allow write: if isSiteAdmin();
     }
 
     // ── Mail queue (Firebase Trigger Email extension) ─────────
@@ -58,3 +66,4 @@ service cloud.firestore {
     }
   }
 }
+

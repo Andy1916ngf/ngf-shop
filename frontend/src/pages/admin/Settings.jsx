@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { httpsCallable }                from 'firebase/functions';
-import { doc, getDoc }                  from 'firebase/firestore';
+import { doc, getDoc, setDoc }                  from 'firebase/firestore';
 import { db, funcs }                    from '../../firebase';
 
 const updateContentFn  = httpsCallable(funcs, 'updateContent');
@@ -26,20 +26,28 @@ const PAGES = [
  * Quill is loaded globally via CDN in index.html as window.Quill.
  */
 export default function Settings() {
-  const [config,   setConfig]   = useState(null);
-  const [activePage, setActivePage] = useState('about');
-  const [pageTitle,  setPageTitle]  = useState('');
-  const [saving,   setSaving]   = useState(false);
+  const [config,        setConfig]        = useState(null);
+  const [adminRoles,    setAdminRoles]    = useState(null);
+  const [activePage,    setActivePage]    = useState('about');
+  const [pageTitle,     setPageTitle]     = useState('');
+  const [saving,        setSaving]        = useState(false);
   const [newCategory,   setNewCategory]   = useState('');
   const [newColourName, setNewColourName] = useState('');
   const [newColourHex,  setNewColourHex]  = useState('#1B36C9');
   const [newSize,       setNewSize]       = useState('');
+  const [newSiteAdmin,  setNewSiteAdmin]  = useState('');
+  const [newShopAdmin,  setNewShopAdmin]  = useState('');
   const quillRef   = useRef(null);
   const editorRef  = useRef(null);
 
   // Load site config
   useEffect(() => {
     getAdminConfigFn().then(res => setConfig(res.data));
+    // Load admin roles directly from Firestore (rules allow siteAdmin reads)
+    getDoc(doc(db, 'config', 'adminRoles')).then(snap => {
+      if (snap.exists()) setAdminRoles(snap.data());
+      else setAdminRoles({ siteAdmins: [], shopAdmins: [] });
+    });
   }, []);
 
   // Load selected page content into Quill
@@ -95,6 +103,16 @@ export default function Settings() {
     }
   }
 
+  async function saveAdminRoles() {
+    if (!adminRoles) return;
+    setSaving(true);
+    try {
+      await setDoc(doc(db, 'config', 'adminRoles'), adminRoles);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function addCategory() {
     const name = newCategory.trim();
     if (!name) return;
@@ -137,7 +155,8 @@ export default function Settings() {
   function removeSize(s) {
     setConfig(c => ({ ...c, sizes: (c.sizes || []).filter(x => x !== s) }));
   }
-    return (
+
+  return (
     <div style={sp.page}>
       <h1 style={sp.pageTitle}>Inställningar</h1>
 
@@ -528,16 +547,116 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ── Role Management ──────────────────────────────── */}
-      <div style={sp.card}>
-        <p style={sp.cardTitle}>Adminroller</p>
-        <p style={sp.hint}>
-          Roller hanteras via Google Workspace Groups.<br />
-          Lägg till eller ta bort medlemmar i{' '}
-          <code>shop-site-admins@nynashamnsgf.se</code> och{' '}
-          <code>shop-admins@nynashamnsgf.se</code> direkt i Google Admin Console.
-        </p>
-      </div>
+      {/* ── Adminroller ──────────────────────────────────── */}
+      {adminRoles && (
+        <div style={sp.card}>
+          <p style={sp.cardTitle}>Adminroller</p>
+          <p style={{ ...sp.hint, marginBottom: 16 }}>
+            Alla Google-konton kan läggas till — ingen domänbegränsning.
+          </p>
+
+          {/* Site admins */}
+          <p style={{ ...sp.label, marginBottom: 8 }}>
+            Site-admins — full åtkomst (ordrar, produkter, inställningar)
+          </p>
+          <div style={sp.chipRow}>
+            {(adminRoles.siteAdmins || []).map(email => (
+              <div key={email} style={sp.chip}>
+                <span style={sp.chipLabel}>{email}</span>
+                <button
+                  type="button"
+                  onClick={() => setAdminRoles(r => ({
+                    ...r,
+                    siteAdmins: r.siteAdmins.filter(e => e !== email),
+                  }))}
+                  style={sp.chipRm}>×</button>
+              </div>
+            ))}
+          </div>
+          <div style={{ ...sp.addRow, marginBottom: 18 }}>
+            <input
+              value={newSiteAdmin}
+              onChange={e => setNewSiteAdmin(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(),
+                newSiteAdmin.trim() && setAdminRoles(r => ({
+                  ...r,
+                  siteAdmins: [...(r.siteAdmins || []), newSiteAdmin.trim()],
+                })) && setNewSiteAdmin('')
+              )}
+              placeholder="e-postadress"
+              style={{ ...sp.input, flex: 1 }}
+            />
+            <button
+              type="button"
+              disabled={!newSiteAdmin.trim()}
+              onClick={() => {
+                if (!newSiteAdmin.trim()) return;
+                setAdminRoles(r => ({
+                  ...r,
+                  siteAdmins: [...(r.siteAdmins || []), newSiteAdmin.trim()],
+                }));
+                setNewSiteAdmin('');
+              }}
+              style={sp.addBtn}>
+              + Lägg till
+            </button>
+          </div>
+
+          {/* Shop admins */}
+          <p style={{ ...sp.label, marginBottom: 8 }}>
+            Shop-admins — ordrar och produkter
+          </p>
+          <div style={sp.chipRow}>
+            {(adminRoles.shopAdmins || []).map(email => (
+              <div key={email} style={sp.chip}>
+                <span style={sp.chipLabel}>{email}</span>
+                <button
+                  type="button"
+                  onClick={() => setAdminRoles(r => ({
+                    ...r,
+                    shopAdmins: r.shopAdmins.filter(e => e !== email),
+                  }))}
+                  style={sp.chipRm}>×</button>
+              </div>
+            ))}
+          </div>
+          <div style={sp.addRow}>
+            <input
+              value={newShopAdmin}
+              onChange={e => setNewShopAdmin(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(),
+                newShopAdmin.trim() && setAdminRoles(r => ({
+                  ...r,
+                  shopAdmins: [...(r.shopAdmins || []), newShopAdmin.trim()],
+                })) && setNewShopAdmin('')
+              )}
+              placeholder="e-postadress"
+              style={{ ...sp.input, flex: 1 }}
+            />
+            <button
+              type="button"
+              disabled={!newShopAdmin.trim()}
+              onClick={() => {
+                if (!newShopAdmin.trim()) return;
+                setAdminRoles(r => ({
+                  ...r,
+                  shopAdmins: [...(r.shopAdmins || []), newShopAdmin.trim()],
+                }));
+                setNewShopAdmin('');
+              }}
+              style={sp.addBtn}>
+              + Lägg till
+            </button>
+          </div>
+
+          <button
+            onClick={saveAdminRoles}
+            disabled={saving}
+            style={{ ...sp.saveBtn, marginTop: 14 }}>
+            {saving ? 'Sparar…' : 'Spara roller'}
+          </button>
+        </div>
+      )}
 
     </div>
   );

@@ -30,15 +30,14 @@ export default function Login() {
 
       const result = await signInWithPopup(auth, provider);
 
-      // Enforce domain restriction client-side as a UX guard
-      // (server-side rules enforce this authoritatively)
+      // Enforce domain restriction — only @nynashamnsgf.se accounts allowed
       if (!result.user.email.endsWith('@nynashamnsgf.se')) {
         await signOut(auth);
         setError('Kontot måste vara ett @nynashamnsgf.se-konto.');
         return;
       }
 
-      // Trigger role claim assignment via Google Groups check
+      // Trigger role assignment — checks config/adminRoles in Firestore
       await getRoleFn();
 
       // Force token refresh to pick up the new ngfRole claim

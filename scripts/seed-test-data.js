@@ -257,6 +257,15 @@ async function seed() {
     console.log(`  ✓ ${id}`);
   }
 
+  console.log('Admin roles:');
+  await db.doc('config/adminRoles').set({
+    siteAdmins: [
+      'anders@nynashamnsgf.se',
+    ],
+    shopAdmins: [],
+  });
+  console.log('  ✔ config/adminRoles');
+
   console.log('\nSite config:');
   await db.doc('config/site').set(SITE_CONFIG);
   console.log('  ✓ config/site');
