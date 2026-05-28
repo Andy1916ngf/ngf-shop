@@ -1,0 +1,45 @@
+name: Seed test data
+
+# Triggered manually from GitHub → Actions → "Seed test data" → Run workflow.
+# Safe to run multiple times — each product/coupon document is set by ID (idempotent).
+# WARNING: running this against the production project will overwrite live data.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type SEED to confirm you want to overwrite test data'
+        required: true
+        default: ''
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'SEED' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install seed dependencies
+        working-directory: scripts
+        run: npm install firebase-admin
+
+      # Write a temporary service account key file for the Admin SDK
+      - name: Write service account key
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa-key.json
+
+      - name: Run seed script
+        working-directory: scripts
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa-key.json
+          FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        run: node seed-test-data.js
+
+      - name: Remove key file
+        if: always()
+        run: rm -f /tmp/sa-key.json
