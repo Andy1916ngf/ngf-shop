@@ -1,45 +1,65 @@
-require('dotenv').config();
-const functions = require('firebase-functions');
+/**
+ * Cloud Functions v2 — all callable functions use the v2 onCall API
+ * (Cloud Run under the hood). The adapter pattern below maps v2 request
+ * objects to the v1-style (data, context) that each handler expects,
+ * so no changes are needed in the individual handler files.
+ */
 
-const { createOrder, readOrder }             = require('./checkout');
-const { handleWebhook }                      = require('./webhook');
-const { captureOrder, markShipped, markDelivered, cancelOrder } = require('./orders');
-const { verifyAdmin, getRole }               = require('./auth');
-const { getProducts, updateProduct, deleteProduct, getProductImageUploadUrl } = require('./products');
-const { updateContent, updateConfig, getAdminConfig } = require('./content');
+const { onCall, onRequest } = require('firebase-functions/v2/https');
 
-const region      = 'europe-west1';
-const runtimeOpts = { maxInstances: 10 }; // cost guardrail — prevents runaway billing
+const { getProducts, updateProduct,
+        deleteProduct, getProductImageUploadUrl,
+        getProducts_admin }                       = require('./products');
+const { createOrder, readOrder }                  = require('./checkout');
+const { captureOrder, markShipped,
+        markDelivered, cancelOrder }              = require('./orders');
+const { checkCoupon }                             = require('./coupons');
+const { kustomWebhook }                           = require('./webhook');
+const { getRole }                                 = require('./auth');
+const { updateContent, updateConfig,
+        getAdminConfig }                          = require('./content');
 
-const { checkCoupon }                                = require('./coupons');
+// Shared options for all functions
+const opts = {
+  region:      'europe-west1',
+  memory:      '256MiB',
+  timeoutSeconds: 60,
+  maxInstances: 10,
+};
+
+// Adapter: maps v2 CallableRequest → v1-style handler(data, context)
+// This keeps all handler files unchanged.
+function callable(fn, extraOpts = {}) {
+  return onCall({ ...opts, ...extraOpts }, (request) =>
+    fn(request.data, { auth: request.auth, app: request.app })
+  );
+}
 
 // ── Public shop ───────────────────────────────────────────────
-exports.getProducts  = functions.region(region).runWith(runtimeOpts).https.onCall(getProducts);
-exports.createOrder  = functions.region(region).runWith(runtimeOpts).https.onCall(createOrder);
-exports.readOrder    = functions.region(region).runWith(runtimeOpts).https.onCall(readOrder);
-exports.checkCoupon  = functions.region(region).runWith(runtimeOpts).https.onCall(checkCoupon);
+exports.getProducts  = callable(getProducts);
+exports.createOrder  = callable(createOrder);
+exports.readOrder    = callable(readOrder);
+exports.checkCoupon  = callable(checkCoupon);
 
-// ── Kustom webhook (HTTP, not onCall) ─────────────────────────
-exports.kustomWebhook = functions.region(region).runWith(runtimeOpts).https.onRequest(handleWebhook);
+// ── Webhook (HTTP, not callable) ──────────────────────────────
+exports.kustomWebhook = onRequest(opts, kustomWebhook);
 
-// ── Admin: authentication ─────────────────────────────────────
-exports.getRole       = functions.region(region).runWith(runtimeOpts).https.onCall(getRole);
+// ── Auth ──────────────────────────────────────────────────────
+exports.getRole      = callable(getRole);
 
-// ── Admin: order management ───────────────────────────────────
-exports.captureOrder    = functions.region(region).runWith(runtimeOpts).https.onCall(captureOrder);
-exports.markShipped     = functions.region(region).runWith(runtimeOpts).https.onCall(markShipped);
-exports.markDelivered   = functions.region(region).runWith(runtimeOpts).https.onCall(markDelivered);
-exports.cancelOrder     = functions.region(region).runWith(runtimeOpts).https.onCall(cancelOrder);
+// ── Admin — orders ────────────────────────────────────────────
+exports.captureOrder   = callable(captureOrder);
+exports.markShipped    = callable(markShipped);
+exports.markDelivered  = callable(markDelivered);
+exports.cancelOrder    = callable(cancelOrder);
 
-// ── Admin: product management ─────────────────────────────────
-exports.getProducts_admin        = functions.region(region).runWith(runtimeOpts).https.onCall(
-  (data, ctx) => { /* wrap to include hidden products for admin */ return require('./products').getAllProducts(data, ctx); }
-);
-exports.updateProduct            = functions.region(region).runWith(runtimeOpts).https.onCall(updateProduct);
-exports.deleteProduct            = functions.region(region).runWith(runtimeOpts).https.onCall(deleteProduct);
-exports.getProductImageUploadUrl = functions.region(region).runWith(runtimeOpts).https.onCall(getProductImageUploadUrl);
+// ── Admin — products ──────────────────────────────────────────
+exports.getProducts_admin       = callable(getProducts_admin);
+exports.updateProduct           = callable(updateProduct);
+exports.deleteProduct           = callable(deleteProduct);
+exports.getProductImageUploadUrl = callable(getProductImageUploadUrl);
 
-// ── Admin: content and config ─────────────────────────────────
-exports.updateContent  = functions.region(region).runWith(runtimeOpts).https.onCall(updateContent);
-exports.updateConfig   = functions.region(region).runWith(runtimeOpts).https.onCall(updateConfig);
-exports.getAdminConfig = functions.region(region).runWith(runtimeOpts).https.onCall(getAdminConfig);
+// ── Admin — content / config ──────────────────────────────────
+exports.updateContent  = callable(updateContent);
+exports.updateConfig   = callable(updateConfig);
+exports.getAdminConfig = callable(getAdminConfig);
