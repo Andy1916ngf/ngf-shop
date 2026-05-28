@@ -17,7 +17,7 @@ const admin = require('firebase-admin');
 // temporary key file written by the workflow. No manual key management needed.
 admin.initializeApp({
   credential: admin.credential.applicationDefault(),
-  projectId:  process.env.FIREBASE_PROJECT_ID,
+  projectId:  process.env.GCP_PROJECT_ID,
 });
 const db = admin.firestore();
 
