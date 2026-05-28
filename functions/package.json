@@ -2,7 +2,7 @@
   "name": "ngf-shop-functions",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": "18" },
+  "engines": { "node": "22" },
   "main": "src/index.js",
   "scripts": {
     "serve":  "firebase emulators:start --only functions,firestore",
