@@ -1,0 +1,246 @@
+/* ── Design tokens ──────────────────────────────────────────── */
+:root {
+  /* Brand colours */
+  --color-royal:      #1B36C9;   /* primary — royal blue */
+  --color-royal-dk:   #142A9B;   /* pressed / darker royal */
+  --color-cobalt:     #3457FF;   /* highlight / link */
+  --color-sky:        #DCE3FF;   /* soft blue tint */
+
+  /* Neutrals */
+  --color-bg:         #FFFFFF;
+  --color-bg-alt:     #F4F6FC;   /* panel / chip backgrounds */
+  --color-ink:        #0A0A0A;
+  --color-ink-soft:   #2A2A2E;
+  --color-ink-mute:   rgba(10, 10, 10, 0.55);
+  --color-ink-faint:  rgba(10, 10, 10, 0.08);
+  --color-hair:       rgba(10, 10, 10, 0.06);
+
+  /* Status */
+  --color-success:    #2D7B4F;
+  --color-success-bg: #D1FAE5;
+  --color-warning:    #92660A;
+  --color-warning-bg: #FEF3CD;
+  --color-danger:     #991B1B;
+  --color-danger-bg:  #FEE2E2;
+  --color-info-bg:    #DCE3FF;
+
+  /* Typography */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body:    'Space Grotesk', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+
+  /* Spacing */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  40px;
+
+  /* Radius */
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  18px;
+  --radius-xl:  24px;
+  --radius-pill: 999px;
+}
+
+/* ── Base reset ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+img,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: var(--color-royal);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+/* ── Product grid ───────────────────────────────────────────── */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 12px 16px 48px;
+}
+
+@media (min-width: 640px) {
+  .product-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ── Category chips scroll row ──────────────────────────────── */
+.chip-row {
+  display: flex;
+  gap: 8px;
+  padding: 16px 20px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+
+/* ── Stripe tile label colour by tone ───────────────────────── */
+.stripe-tile .tile-lbl       { color: rgba(255,255,255,0.6); }
+.stripe-tile.tone-light .tile-lbl,
+.stripe-tile.tone-sky   .tile-lbl { color: rgba(10,10,10,0.38); }
+
+/* ── Responsive logo name ───────────────────────────────────── */
+.logo-name-short { display: none; }
+.logo-name-full  { display: inline; }
+
+@media (max-width: 380px) {
+  .logo-name-full  { display: none; }
+  .logo-name-short { display: inline; }
+}
+/* Full name shown on most screens; abbreviated to NGF on very small viewports */
+.logo-name-full  { display: inline; font-size: 15px; letter-spacing: -0.3px; }
+.logo-name-short { display: none;   font-size: 19px; letter-spacing: -0.5px; }
+
+@media (max-width: 380px) {
+  .logo-name-full  { display: none;   }
+  .logo-name-short { display: inline; }
+}
+
+/* ── Utility classes ────────────────────────────────────────── */
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--color-ink-mute);
+  font-size: 0.875rem;
+}
+
+/* Rich text content (Quill output) */
+.rich-text h1, .rich-text h2, .rich-text h3 {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+  margin-top: 1.5rem;
+}
+.rich-text h1 { font-size: 2rem; }
+.rich-text h2 { font-size: 1.5rem; }
+.rich-text h3 { font-size: 1.25rem; }
+.rich-text p  { margin-bottom: 1rem; }
+.rich-text ul,
+.rich-text ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+.rich-text li { margin-bottom: 0.25rem; }
+.rich-text a  { color: var(--color-royal); }
+.rich-text strong { font-weight: 700; }
+
+/* Static pages */
+.static-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-md);
+}
+.static-page > h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  margin-bottom: var(--space-lg);
+}
+
+/* Diagonal-stripe product tile (matches the design mockup) */
+.stripe-tile {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      var(--color-royal) 0 13px,
+      rgba(255, 255, 255, 0.065) 13px 26px
+    ),
+    var(--color-royal);
+}
+.stripe-tile.tone-dark {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      #0A0A0A 0 13px,
+      rgba(255, 255, 255, 0.045) 13px 26px
+    ),
+    #0A0A0A;
+}
+.stripe-tile.tone-light {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      #F4F6FC 0 13px,
+      rgba(10, 10, 10, 0.04) 13px 26px
+    ),
+    #F4F6FC;
+}
+.stripe-tile.tone-sky {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      #DCE3FF 0 13px,
+      rgba(10, 10, 10, 0.035) 13px 26px
+    ),
+    #DCE3FF;
+}
+
+/* ── Confirmation page animations ───────────────────────────── */
+@keyframes confirmPop {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+@keyframes circleDraw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes checkDraw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Admin layout — responsive sidebar / bottom nav ─────────── */
+@media (max-width: 639px) {
+  .admin-sidebar { display: none !important; }
+  [style*="position: sticky"] { display: none; }
+}
+@media (max-width: 639px) {
+  /* Show bottom nav on mobile */
+  nav[style*="position: fixed"] { display: flex !important; }
+}
+@media (min-width: 640px) {
+  /* Hide bottom nav on desktop */
+  nav[style*="position: fixed; bottom: 0"] { display: none !important; }
+}

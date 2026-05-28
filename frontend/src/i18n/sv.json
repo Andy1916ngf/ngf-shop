@@ -1,0 +1,67 @@
+{
+  "nav": {
+    "shop":     "Butik",
+    "basket":   "Varukorg",
+    "about":    "Om oss",
+    "tac":      "Köpvillkor",
+    "faq":      "FAQ"
+  },
+  "catalog": {
+    "season":      "Säsong 26 · Vårkollektion",
+    "hero":        "Tränat för",
+    "heroItalic":  "rörelsen.",
+    "all":         "Alla",
+    "clothes":     "Kläder",
+    "equipment":   "Utrustning",
+    "accessories": "Tillbehör"
+  },
+  "product": {
+    "back":           "Tillbaka",
+    "inclVat":        "inkl. moms",
+    "colour":         "Färg",
+    "size":           "Storlek",
+    "sizeGuide":      "Storleksguide",
+    "customText":     "Tryck",
+    "customTextHint": "Valfri text, max 20 tecken",
+    "addToBag":       "Lägg i korgen",
+    "addedToBag":     "Tillagd i korgen",
+    "continueShopping": "Fortsätt handla",
+    "toCheckout":     "Till kassan"
+  },
+  "basket": {
+    "title":       "Varukorg",
+    "empty":       "Varukorgen är tom",
+    "coupon":      "Rabattkod",
+    "apply":       "Använd",
+    "remove":      "Ta bort",
+    "subtotal":    "Delsumma",
+    "shipping":    "Frakt",
+    "discount":    "Rabatt",
+    "total":       "Totalt",
+    "checkout":    "Till kassan",
+    "savedFor":    "Sparas i 10 dagar"
+  },
+  "status": {
+    "beställd":   "Beställd",
+    "bekräftad":  "Bekräftad",
+    "skickad":    "Skickad",
+    "levererad":  "Levererad",
+    "avbruten":   "Avbruten",
+    "tvist":      "Tvist"
+  },
+  "admin": {
+    "orders":      "Ordrar",
+    "products":    "Produkter",
+    "settings":    "Inställningar",
+    "confirm":     "Bekräfta",
+    "ship":        "Markera skickad",
+    "deliver":     "Markera levererad",
+    "cancel":      "Avbryt order",
+    "newProduct":  "Ny produkt",
+    "save":        "Spara",
+    "back":        "Tillbaka"
+  },
+  "lang": {
+    "toggle": "EN"
+  }
+}

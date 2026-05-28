@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files — NEVER commit these
+.env
+.env.local
+**/.env
+**/.env.local
+functions/.runtimeconfig.json
+
+# Service account key — NEVER commit this
+scripts/serviceAccountKey.json
+
+# Build output
+frontend/dist/
+
+# Firebase cache
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+database-debug.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

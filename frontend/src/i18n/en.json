@@ -1,0 +1,67 @@
+{
+  "nav": {
+    "shop":     "Shop",
+    "basket":   "Basket",
+    "about":    "About",
+    "tac":      "Terms",
+    "faq":      "FAQ"
+  },
+  "catalog": {
+    "season":      "Season 26 · Spring collection",
+    "hero":        "Built for",
+    "heroItalic":  "the floor.",
+    "all":         "All",
+    "clothes":     "Clothing",
+    "equipment":   "Equipment",
+    "accessories": "Accessories"
+  },
+  "product": {
+    "back":           "Back",
+    "inclVat":        "incl. VAT",
+    "colour":         "Colour",
+    "size":           "Size",
+    "sizeGuide":      "Size guide",
+    "customText":     "Print",
+    "customTextHint": "Optional text, max 20 characters",
+    "addToBag":       "Add to bag",
+    "addedToBag":     "Added to bag",
+    "continueShopping": "Continue shopping",
+    "toCheckout":     "To checkout"
+  },
+  "basket": {
+    "title":       "Basket",
+    "empty":       "Your basket is empty",
+    "coupon":      "Discount code",
+    "apply":       "Apply",
+    "remove":      "Remove",
+    "subtotal":    "Subtotal",
+    "shipping":    "Shipping",
+    "discount":    "Discount",
+    "total":       "Total",
+    "checkout":    "Checkout",
+    "savedFor":    "Saved for 10 days"
+  },
+  "status": {
+    "beställd":   "Ordered",
+    "bekräftad":  "Confirmed",
+    "skickad":    "Shipped",
+    "levererad":  "Delivered",
+    "avbruten":   "Cancelled",
+    "tvist":      "Dispute"
+  },
+  "admin": {
+    "orders":      "Orders",
+    "products":    "Products",
+    "settings":    "Settings",
+    "confirm":     "Confirm",
+    "ship":        "Mark as shipped",
+    "deliver":     "Mark as delivered",
+    "cancel":      "Cancel order",
+    "newProduct":  "New product",
+    "save":        "Save",
+    "back":        "Back"
+  },
+  "lang": {
+    "toggle": "SV"
+  }
+}
