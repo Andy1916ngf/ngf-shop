@@ -8,7 +8,7 @@ const { verifyAdmin, getRole }               = require('./auth');
 const { getProducts, updateProduct, deleteProduct, getProductImageUploadUrl } = require('./products');
 const { updateContent, updateConfig, getAdminConfig } = require('./content');
 
-const region      = 'europe-north1';
+const region      = 'europe-west1';
 const runtimeOpts = { maxInstances: 10 }; // cost guardrail — prevents runaway billing
 
 const { checkCoupon }                                = require('./coupons');

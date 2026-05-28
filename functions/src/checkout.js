@@ -141,7 +141,7 @@ async function createOrder(data, context) {
 
   // Build Kustom payload
   const functionsUrl = process.env.GCLOUD_PROJECT
-    ? `https://europe-north1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net`
+    ? `https://europe-west1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net`
     : 'REPLACE_ME_FUNCTIONS_BASE_URL';
 
   const payload = {
