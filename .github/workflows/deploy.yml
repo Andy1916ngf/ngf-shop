@@ -56,13 +56,21 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
+      - name: Set Artifact Registry cleanup policy
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa-key.json
+        run: |
+          firebase functions:artifacts:setpolicy \
+            --project ${{ secrets.VITE_FIREBASE_PROJECT_ID }} \
+            --force || true
+
       - name: Deploy to Firebase
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa-key.json
         run: |
           firebase deploy \
             --project ${{ secrets.VITE_FIREBASE_PROJECT_ID }} \
-            --non-interactive
+            --non-interactive \
             --force
 
       - name: Remove service account key
