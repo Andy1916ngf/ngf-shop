@@ -2,25 +2,25 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 
 const SHOP_DOMAIN = process.env.SHOP_DOMAIN || 'https://butik.nynashamnsgf.se';
-const SHOP_EMAIL  = process.env.SHOP_EMAIL  || 'butik@nynashamnsgf.se';
+const SHOP_EMAIL  = process.env.ADMIN_EMAIL_GROUP || 'butiken@nynashamnsgf.se';
 
 /**
  * Queue an email via the Firebase Trigger Email extension.
- * Writes to /mail collection — the extension picks it up automatically.
  *
  * @param {string} orderId
  * @param {object} order    — order data from Firestore
- * @param {string} to       — recipient address or group alias
- * @param {string} template — new_order | confirmed | shipped | cancelled | dispute
+ * @param {string} to       — recipient address
+ * @param {string} template — new_order | order_receipt | confirmed | shipped | cancelled | dispute
  */
 async function queueEmail(orderId, order, to, template) {
   const ref  = `#${orderId.slice(0, 8).toUpperCase()}`;
   const subjects = {
-    new_order:  `Ny beställning — ${ref}`,
-    confirmed:  `Orderbekräftelse — ${ref}`,
-    shipped:    `Din order är på väg — ${ref}`,
-    cancelled:  `Order avbruten — ${ref}`,
-    dispute:    `⚠️ Tvist öppnad — ${ref}`,
+    new_order:     `Ny beställning — ${ref}`,
+    order_receipt: `Tack för din beställning — ${ref}`,
+    confirmed:     `Orderbekräftelse — ${ref}`,
+    shipped:       `Din order är klar att hämta — ${ref}`,
+    cancelled:     `Order avbruten — ${ref}`,
+    dispute:       `⚠️ Tvist öppnad — ${ref}`,
   };
 
   await admin.firestore().collection('mail').add({
@@ -48,6 +48,30 @@ function buildEmailHtml(template, orderId, order) {
       <a href="mailto:${SHOP_EMAIL}" style="color:#1B36C9;">${SHOP_EMAIL}</a>
     </p>
     </div>`;
+
+  if (template === 'order_receipt') {
+    const items = (order.items || []).map(i =>
+      `<tr>
+        <td style="padding:5px 0;color:#555;">${i.name}${i.selectedVariations ? ` (${Object.values(i.selectedVariations).filter(Boolean).join(', ')})` : ''}</td>
+        <td style="padding:5px 0;text-align:right;">${i.quantity} × ${((i.unitPrice || 0) / 100).toFixed(0)} kr</td>
+      </tr>`
+    ).join('');
+
+    return `${header}
+      <p>Tack för din beställning! Vi återkommer när din order är klar att hämta.</p>
+      <table style="border-collapse:collapse;width:100%;margin-top:12px;">
+        <tr><td style="padding:5px 0;color:#555;width:120px;">Order</td><td><strong>${ref}</strong></td></tr>
+        ${items}
+        ${order.discountAmount > 0 ? `<tr><td style="padding:5px 0;color:#555;">Rabatt</td><td>−${(order.discountAmount / 100).toFixed(0)} kr</td></tr>` : ''}
+        ${order.shippingCost > 0 ? `<tr><td style="padding:5px 0;color:#555;">Frakt</td><td>${(order.shippingCost / 100).toFixed(0)} kr</td></tr>` : ''}
+        <tr><td style="padding:5px 0;color:#555;"><strong>Totalt</strong></td><td><strong>${total}</strong></td></tr>
+        <tr><td style="padding:5px 0;color:#555;">Upphämtning</td><td>${order.deliveryMethod === 'delivery' ? 'Hemleverans' : 'Vid ordinarie träning'}</td></tr>
+      </table>
+      <p style="margin-top:16px;">Frågor? Kontakta oss på
+        <a href="mailto:${SHOP_EMAIL}" style="color:#1B36C9;">${SHOP_EMAIL}</a>
+      </p>
+    ${footer}`;
+  }
 
   if (template === 'new_order') {
     return `${header}
