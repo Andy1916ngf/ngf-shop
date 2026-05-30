@@ -68,6 +68,16 @@ async function handleWebhook(req, res) {
 
     await orderRef.update(updates);
 
+    // Send order receipt to customer
+    if (updates.customerEmail) {
+      await queueEmail(
+        orderId,
+        { ...order, ...updates },
+        updates.customerEmail,
+        'order_receipt'
+      );
+    }
+
     // Notify shop admin of new order
     await queueEmail(
       orderId,
