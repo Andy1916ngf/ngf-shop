@@ -4,12 +4,17 @@ const axios  = require('axios');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
+// Kustom API client — auth header is set lazily via interceptor
+// so env vars are read at request time, not at module load time
 const kustom = axios.create({
   baseURL: process.env.KUSTOM_API_URL,
-  headers: {
-    Authorization:  `Basic ${process.env.KUSTOM_API_KEY}`,
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
+});
+
+kustom.interceptors.request.use(config => {
+  config.headers.Authorization =
+    `Basic ${Buffer.from(process.env.KUSTOM_API_KEY).toString('base64')}`;
+  return config;
 });
 
 /**
@@ -37,7 +42,6 @@ async function createOrder(data, context) {
     const p = productSnaps[idx].data();
     if (!p || !p.visible) throw new Error(`product ${item.productId} unavailable`);
 
-    // Append variation details to the line item name for clarity on the receipt
     const varParts = item.selectedVariations
       ? Object.values(item.selectedVariations).filter(Boolean)
       : [];
@@ -50,8 +54,8 @@ async function createOrder(data, context) {
       name,
       quantity:         item.quantity,
       quantity_unit:    'pcs',
-      unit_price:       p.price,                                           // öre
-      tax_rate:         2500,                                              // 25% Swedish VAT
+      unit_price:       p.price,
+      tax_rate:         2500,                                // 25% Swedish VAT
       total_amount:     total,
       total_tax_amount: Math.round(total - total / 1.25),
     };
@@ -74,14 +78,11 @@ async function createOrder(data, context) {
         ? Math.round(subtotal * c.value / 100)
         : c.value;
     }
-    // If invalid, silently proceed at full price (UI should pre-validate)
   }
 
   const subtotal = orderLines.reduce((s, l) => s + l.total_amount, 0);
 
   // ── Shipping ─────────────────────────────────────────────
-  // Default: free pick-up. If deliveryMethod === 'delivery' and
-  // shippingEnabled is true in config, calculate cost from shippingRules.
   let shippingCost = 0;
   let shippingRef  = 'pickup';
   let shippingName = 'Upphämtning vid träning (gratis)';
@@ -91,13 +92,11 @@ async function createOrder(data, context) {
     const config     = configSnap.data() || {};
 
     if (config.shippingEnabled && config.shippingRules?.length) {
-      // Sum shippingSize × quantity across all items
       const totalUnits = items.reduce((sum, item, idx) => {
         const p = productSnaps[idx].data();
         return sum + ((p.shippingSize || 1) * item.quantity);
       }, 0);
 
-      // Find first rule where totalUnits ≤ maxUnits; fall back to last rule
       const sorted = [...config.shippingRules].sort((a, b) => a.maxUnits - b.maxUnits);
       const rule   = sorted.find(r => totalUnits <= r.maxUnits) ?? sorted[sorted.length - 1];
 
@@ -107,12 +106,10 @@ async function createOrder(data, context) {
         shippingName = 'Hemleverans';
       }
     }
-    // shippingEnabled = false → silently fall back to free pick-up
   }
 
   const orderAmount = subtotal - discount + shippingCost;
 
-  // Add discount line if applicable
   if (discount > 0) {
     orderLines.push({
       type:             'discount',
@@ -139,10 +136,10 @@ async function createOrder(data, context) {
     total_tax_amount: 0,
   };
 
-  // Build Kustom payload
-  const functionsUrl = process.env.GCLOUD_PROJECT
-    ? `https://europe-west1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net`
-    : 'REPLACE_ME_FUNCTIONS_BASE_URL';
+  // Cloud Functions base URL for the push notification
+  const functionsUrl = process.env.GCP_PROJECT_ID
+    ? `https://europe-west1-${process.env.GCP_PROJECT_ID}.cloudfunctions.net`
+    : process.env.SHOP_DOMAIN;
 
   const payload = {
     purchase_country:  'SE',
@@ -157,21 +154,22 @@ async function createOrder(data, context) {
       terms:        `${process.env.SHOP_DOMAIN}/villkor`,
       checkout:     `${process.env.SHOP_DOMAIN}/checkout`,
       confirmation: `${process.env.SHOP_DOMAIN}/confirmation?order_id={checkout.order.id}`,
-      push:         `${functionsUrl}/kustomWebhook`,
+      push:         `${functionsUrl}/kustomWebhook?order_id={checkout.order.id}`,
     },
   };
 
-  // Call Kustom API
-  const res = await kustom.post('/payments/v1/authorizations/', payload);
+  // Call Kustom Checkout API — correct v3 endpoint
+  const res = await kustom.post('/checkout/v3/orders', payload);
   const kustomOrder = res.data;
 
-  // Persist order to Firestore
+  // Persist order skeleton to Firestore
   await db.doc(`orders/${kustomOrder.order_id}`).set({
     kustomOrderId:   kustomOrder.order_id,
     status:          'beställd',
-    kustomStatus:    'authorized',
-    customerEmail:   null,   // populated from Kustom confirmation callback
+    kustomStatus:    'checkout_incomplete',
+    customerEmail:   null,   // populated by kustomWebhook push
     customerName:    null,
+    customerPhone:   null,
     items: items.map((item, idx) => ({
       productId:          item.productId,
       name:               productSnaps[idx].data().name,
@@ -197,19 +195,13 @@ async function createOrder(data, context) {
     });
   }
 
-  return { html_snippet: kustomOrder.html_snippet };
+  return { html_snippet: kustomOrder.html_snippet, orderId: kustomOrder.order_id };
 }
 
 /**
- * Callable: fetch the Kustom confirmation snippet after payment completes.
- * data: { orderId: string }
- */
-/**
  * Callable (public): fetch a placed order from Firestore by Kustom order ID.
- *
  * The orderId comes from the URL param ?order_id=... that Kustom appends
- * to the confirmation redirect. Since it is a Kustom-generated UUID it is
- * not guessable, so no additional auth is required for the confirmation page.
+ * to the confirmation redirect.
  *
  * data: { orderId: string }
  */
