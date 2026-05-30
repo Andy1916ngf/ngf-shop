@@ -14,7 +14,7 @@ const { createOrder, readOrder }                  = require('./checkout');
 const { captureOrder, markShipped,
         markDelivered, cancelOrder }              = require('./orders');
 const { checkCoupon }                             = require('./coupons');
-const { kustomWebhook }                           = require('./webhook');
+const { handleWebhook }                           = require('./webhook');
 const { getRole }                                 = require('./auth');
 const { updateContent, updateConfig,
         getAdminConfig }                          = require('./content');
@@ -42,7 +42,7 @@ exports.readOrder    = callable(readOrder);
 exports.checkCoupon  = callable(checkCoupon);
 
 // ── Webhook (HTTP, not callable) ──────────────────────────────
-exports.kustomWebhook = onRequest(opts, kustomWebhook);
+exports.kustomWebhook = onRequest(opts, handleWebhook);
 
 // ── Auth ──────────────────────────────────────────────────────
 exports.getRole      = callable(getRole);
