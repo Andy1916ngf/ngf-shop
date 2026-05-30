@@ -1,227 +1,130 @@
-const admin = require('firebase-admin');
-const axios  = require('axios');
-
-if (!admin.apps.length) admin.initializeApp();
-const db = admin.firestore();
-
-// Base64-encode the key_id:password credentials for HTTP Basic Auth
-const kustom = axios.create({
-  baseURL: process.env.KUSTOM_API_URL,
-  headers: {
-    Authorization:  `Basic ${Buffer.from(process.env.KUSTOM_API_KEY).toString('base64')}`,
-    'Content-Type': 'application/json',
-  },
-});
+import { useEffect, useRef }  from 'react';
+import { useLocation,
+         useNavigate }        from 'react-router-dom';
 
 /**
- * Callable: create a Kustom order from a basket.
+ * Checkout page — renders the Kustom Checkout widget.
  *
- * data: {
- *   items: [{ productId, quantity, selectedVariations? }],
- *   couponCode?: string,
- *   deliveryMethod?: 'pickup' | 'delivery'   default 'pickup'
- * }
+ * Flow:
+ *   1. Basket calls createOrder → receives html_snippet
+ *   2. Basket navigates here with html_snippet in router state
+ *   3. This page injects the snippet into the DOM
+ *   4. Kustom's scripts mount the payment iframe into #kco-checkout
+ *   5. Customer pays → Kustom redirects to /confirmation?order_id=…
  *
- * Prices and shipping costs are ALWAYS fetched from Firestore — client values are ignored.
+ * Kustom requires innerHTML (not dangerouslySetInnerHTML) so that the
+ * embedded <script> tags actually execute. A re-execution pass handles
+ * scripts that browsers skip when set via innerHTML.
  */
-async function createOrder(data, context) {
-  const { items, couponCode, deliveryMethod = 'pickup' } = data;
-  if (!items || items.length === 0) throw new Error('empty basket');
+export default function Checkout() {
+  const location     = useLocation();
+  const navigate     = useNavigate();
+  const containerRef = useRef(null);
+  const htmlSnippet  = location.state?.html_snippet;
 
-  // Fetch authoritative product data from Firestore
-  const productSnaps = await Promise.all(
-    items.map(i => db.doc(`products/${i.productId}`).get())
+  useEffect(() => {
+    if (!htmlSnippet || !containerRef.current) return;
+
+    containerRef.current.innerHTML = htmlSnippet;
+
+    // Re-execute scripts — browsers skip scripts injected via innerHTML
+    Array.from(containerRef.current.querySelectorAll('script')).forEach(old => {
+      const fresh = document.createElement('script');
+      Array.from(old.attributes).forEach(a => fresh.setAttribute(a.name, a.value));
+      fresh.textContent = old.textContent;
+      old.parentNode.replaceChild(fresh, old);
+    });
+  }, [htmlSnippet]);
+
+  // Invalid session — user navigated here directly or state was lost
+  if (!htmlSnippet) {
+    return (
+      <main style={s.errorPage}>
+        <p style={s.errorText}>Checkout-sessionen är ogiltig eller har gått ut.</p>
+        <button onClick={() => navigate('/varukorg')} style={s.errorBtn}>
+          ← Tillbaka till varukorgen
+        </button>
+      </main>
+    );
+  }
+
+  return (
+    <main style={s.page}>
+
+      {/* Minimal header — no basket icon during checkout */}
+      <div style={s.topBar}>
+        <button onClick={() => navigate('/varukorg')} style={s.backLink}>
+          ← Varukorg
+        </button>
+        <span style={s.secBadge}>🔒 Säker betalning</span>
+      </div>
+
+      {/* Kustom mounts its iframe into this div */}
+      <div ref={containerRef} id="kco-checkout" style={s.kcoWrap} />
+
+    </main>
   );
-
-  // Build Kustom order lines
-  const orderLines = items.map((item, idx) => {
-    const p = productSnaps[idx].data();
-    if (!p || !p.visible) throw new Error(`product ${item.productId} unavailable`);
-
-    const varParts = item.selectedVariations
-      ? Object.values(item.selectedVariations).filter(Boolean)
-      : [];
-    const name  = varParts.length ? `${p.name} (${varParts.join(', ')})` : p.name;
-    const total = p.price * item.quantity;
-
-    return {
-      type:             'physical',
-      reference:        item.productId,
-      name,
-      quantity:         item.quantity,
-      quantity_unit:    'pcs',
-      unit_price:       p.price,
-      tax_rate:         2500,                                // 25% Swedish VAT
-      total_amount:     total,
-      total_tax_amount: Math.round(total - total / 1.25),
-    };
-  });
-
-  // Validate and apply coupon server-side
-  let discount = 0;
-  if (couponCode) {
-    const couponSnap = await db.doc(`coupons/${couponCode.toUpperCase()}`).get();
-    const c = couponSnap.data();
-    const now = new Date();
-    const validFrom  = c?.validFrom?.toDate();
-    const validUntil = c?.validUntil?.toDate();
-    const withinDates = (!validFrom || validFrom <= now) && (!validUntil || validUntil >= now);
-    const withinLimit = !c?.usageLimit || c.timesUsed < c.usageLimit;
-
-    if (c && c.active && withinDates && withinLimit) {
-      const subtotal = orderLines.reduce((s, l) => s + l.total_amount, 0);
-      discount = c.type === 'percent'
-        ? Math.round(subtotal * c.value / 100)
-        : c.value;
-    }
-  }
-
-  const subtotal = orderLines.reduce((s, l) => s + l.total_amount, 0);
-
-  // ── Shipping ─────────────────────────────────────────────
-  let shippingCost = 0;
-  let shippingRef  = 'pickup';
-  let shippingName = 'Upphämtning vid träning (gratis)';
-
-  if (deliveryMethod === 'delivery') {
-    const configSnap = await db.doc('config/site').get();
-    const config     = configSnap.data() || {};
-
-    if (config.shippingEnabled && config.shippingRules?.length) {
-      const totalUnits = items.reduce((sum, item, idx) => {
-        const p = productSnaps[idx].data();
-        return sum + ((p.shippingSize || 1) * item.quantity);
-      }, 0);
-
-      const sorted = [...config.shippingRules].sort((a, b) => a.maxUnits - b.maxUnits);
-      const rule   = sorted.find(r => totalUnits <= r.maxUnits) ?? sorted[sorted.length - 1];
-
-      if (rule) {
-        shippingCost = rule.costInOre;
-        shippingRef  = 'delivery';
-        shippingName = 'Hemleverans';
-      }
-    }
-  }
-
-  const orderAmount = subtotal - discount + shippingCost;
-
-  if (discount > 0) {
-    orderLines.push({
-      type:             'discount',
-      reference:        couponCode,
-      name:             `Rabattkod: ${couponCode}`,
-      quantity:         1,
-      quantity_unit:    'pcs',
-      unit_price:       -discount,
-      tax_rate:         0,
-      total_amount:     -discount,
-      total_tax_amount: 0,
-    });
-  }
-
-  const shippingLine = {
-    type:             'shipping_fee',
-    reference:        shippingRef,
-    name:             shippingName,
-    quantity:         1,
-    quantity_unit:    'pcs',
-    unit_price:       shippingCost,
-    tax_rate:         0,
-    total_amount:     shippingCost,
-    total_tax_amount: 0,
-  };
-
-  // Cloud Functions base URL for the push notification
-  const functionsUrl = process.env.GCP_PROJECT_ID
-    ? `https://europe-west1-${process.env.GCP_PROJECT_ID}.cloudfunctions.net`
-    : process.env.SHOP_DOMAIN;
-
-  const payload = {
-    purchase_country:  'SE',
-    purchase_currency: 'SEK',
-    locale:            'sv-SE',
-    order_amount:      orderAmount,
-    order_tax_amount:  orderLines
-      .filter(l => l.tax_rate > 0)
-      .reduce((s, l) => s + l.total_tax_amount, 0),
-    order_lines: [...orderLines, shippingLine],
-    merchant_urls: {
-      terms:        `${process.env.SHOP_DOMAIN}/villkor`,
-      checkout:     `${process.env.SHOP_DOMAIN}/checkout`,
-      confirmation: `${process.env.SHOP_DOMAIN}/confirmation?order_id={checkout.order.id}`,
-      push:         `${functionsUrl}/kustomWebhook?order_id={checkout.order.id}`,
-    },
-  };
-
-  // Call Kustom Checkout API — correct v3 endpoint
-  const res = await kustom.post('/checkout/v3/orders', payload);
-  const kustomOrder = res.data;
-
-  // Persist order skeleton to Firestore
-  await db.doc(`orders/${kustomOrder.order_id}`).set({
-    kustomOrderId:   kustomOrder.order_id,
-    status:          'beställd',
-    kustomStatus:    'checkout_incomplete',
-    customerEmail:   null,   // populated by kustomWebhook push
-    customerName:    null,
-    customerPhone:   null,
-    items: items.map((item, idx) => ({
-      productId:          item.productId,
-      name:               productSnaps[idx].data().name,
-      quantity:           item.quantity,
-      unitPrice:          productSnaps[idx].data().price,
-      selectedVariations: item.selectedVariations || null,
-    })),
-    totalAmount:    orderAmount,
-    currency:       'SEK',
-    couponCode:     couponCode || null,
-    discountAmount: discount,
-    deliveryMethod: deliveryMethod,
-    shippingCost:   shippingCost,
-    adminNote:      null,
-    createdAt:      admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt:      admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  // Increment coupon usage counter
-  if (couponCode && discount > 0) {
-    await db.doc(`coupons/${couponCode.toUpperCase()}`).update({
-      timesUsed: admin.firestore.FieldValue.increment(1),
-    });
-  }
-
-  return { html_snippet: kustomOrder.html_snippet, orderId: kustomOrder.order_id };
 }
 
-/**
- * Callable (public): fetch a placed order from Firestore by Kustom order ID.
- * The orderId comes from the URL param ?order_id=... that Kustom appends
- * to the confirmation redirect.
- *
- * data: { orderId: string }
- */
-async function readOrder(data) {
-  const { orderId } = data;
-  if (!orderId) throw new Error('missing orderId');
+const s = {
+  page: {
+    minHeight: '100vh',
+    background: '#fff',
+  },
+  topBar: {
+    display:        'flex',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    padding:        '14px 20px',
+    borderBottom:   '0.5px solid rgba(10,10,10,.07)',
+  },
+  backLink: {
+    background:     'none',
+    border:         'none',
+    fontFamily:     "'Space Grotesk', system-ui, sans-serif",
+    fontSize:       13,
+    fontWeight:     500,
+    color:          'rgba(10,10,10,.55)',
+    cursor:         'pointer',
+    padding:        0,
+  },
+  secBadge: {
+    fontFamily:    "'JetBrains Mono', monospace",
+    fontSize:      10,
+    letterSpacing: '.5px',
+    textTransform: 'uppercase',
+    color:         'rgba(10,10,10,.4)',
+  },
+  kcoWrap: {
+    width:    '100%',
+    minHeight: '60vh',
+  },
 
-  const snap = await db.doc(`orders/${orderId}`).get();
-  if (!snap.exists) throw new Error('order not found');
-
-  const order = snap.data();
-  return {
-    orderId:        orderId,
-    status:         order.status,
-    items:          order.items,
-    totalAmount:    order.totalAmount,
-    currency:       order.currency,
-    deliveryMethod: order.deliveryMethod,
-    shippingCost:   order.shippingCost,
-    discountAmount: order.discountAmount,
-    couponCode:     order.couponCode     || null,
-    customerName:   order.customerName   || null,
-    createdAt:      order.createdAt?.toMillis?.() || null,
-  };
-}
-
-module.exports = { createOrder, readOrder };
+  // Error state
+  errorPage: {
+    minHeight:      '60vh',
+    display:        'flex',
+    flexDirection:  'column',
+    alignItems:     'center',
+    justifyContent: 'center',
+    padding:        '40px 20px',
+    gap:            20,
+  },
+  errorText: {
+    fontFamily: "'Space Grotesk', system-ui, sans-serif",
+    fontSize:   15,
+    color:      'rgba(10,10,10,.5)',
+    textAlign:  'center',
+  },
+  errorBtn: {
+    padding:      '12px 24px',
+    borderRadius: 999,
+    border:       '1px solid rgba(10,10,10,.12)',
+    background:   '#fff',
+    fontFamily:   "'Space Grotesk', system-ui, sans-serif",
+    fontSize:     14,
+    fontWeight:   600,
+    cursor:       'pointer',
+    color:        '#0A0A0A',
+  },
+};
