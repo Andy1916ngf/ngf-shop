@@ -5,13 +5,16 @@ const { queueEmail } = require('./mail');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-// Kustom API client — same credentials as checkout.js
+// Kustom API client — auth header evaluated at request time via interceptor
 const kustom = axios.create({
   baseURL: process.env.KUSTOM_API_URL,
-  headers: {
-    Authorization:  `Basic ${Buffer.from(process.env.KUSTOM_API_KEY).toString('base64')}`,
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
+});
+
+kustom.interceptors.request.use(config => {
+  config.headers.Authorization =
+    `Basic ${Buffer.from(process.env.KUSTOM_API_KEY).toString('base64')}`;
+  return config;
 });
 
 /**
