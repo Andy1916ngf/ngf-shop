@@ -43,13 +43,13 @@ function CheckCircle() {
 function NextSteps({ deliveryMethod }) {
   const steps = deliveryMethod === 'delivery'
     ? [
-        { icon: '✉️', text: 'Du får en orderbekräftelse via e-post.' },
-        { icon: '✅', text: 'Vi meddelar dig när ordern är bekräftad och vi börjar trycka.' },
+        { icon: '✉️', text: 'En orderbekräftelse har skickats till din e-postadress.' },
+        { icon: '✅', text: 'Vi meddelar dig när din order är bekräftad och klar.' },
         { icon: '📬', text: 'Du får ett nytt meddelande när ordern är skickad.' },
       ]
     : [
-        { icon: '✉️', text: 'Du får en orderbekräftelse via e-post.' },
-        { icon: '✅', text: 'Vi meddelar dig när din order är tryckt och klar att hämta.' },
+        { icon: '✉️', text: 'En orderbekräftelse har skickats till din e-postadress.' },
+        { icon: '✅', text: 'Vi meddelar dig när din order är klar att hämta.' },
         { icon: '📍', text: 'Hämta din order vid ordinarie träning.' },
       ];
 
@@ -136,8 +136,8 @@ export default function Confirmation() {
         <CheckCircle />
         <h1 style={s.heroH1}>Tack för din beställning!</h1>
         <p style={s.heroSub}>
-          Din betalning är registrerad. Du får en bekräftelse via e-post
-          inom kort.
+          Din betalning är registrerad. En orderbekräftelse har skickats
+          till din e-postadress.
         </p>
         <p style={s.contactNote}>
           Frågor? Skriv till{' '}
