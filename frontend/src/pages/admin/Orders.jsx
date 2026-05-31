@@ -1,7 +1,8 @@
-import { useEffect, useState }                           from 'react';
-import { collection, query, orderBy, where, onSnapshot } from 'firebase/firestore';
-import { useNavigate }                                    from 'react-router-dom';
-import { db }                                             from '../../firebase';
+
+import { useEffect, useState }                              from 'react';
+import { collection, query, orderBy, getDocs }             from 'firebase/firestore';
+import { useNavigate }                                       from 'react-router-dom';
+import { db }                                                from '../../firebase';
 
 const STATUS_COLOR = {
   beställd:  { bg: '#FEF3C7', color: '#92400E' },
@@ -31,20 +32,26 @@ function fmt(ts) {
 }
 
 export default function Orders() {
-  const navigate           = useNavigate();
+  const navigate              = useNavigate();
   const [orders,  setOrders]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab,     setTab]     = useState('alla');
 
-  useEffect(() => {
-    // Direct Firestore read — Firestore rules allow isNgfAdmin() users
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, snap => {
+  async function loadOrders() {
+    setLoading(true);
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
+      );
       setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+    } finally {
       setLoading(false);
-    });
-    return unsub;
-  }, []);
+    }
+  }
+
+  useEffect(() => { loadOrders(); }, []);
 
   const visible = tab === 'alla'
     ? orders
@@ -55,7 +62,16 @@ export default function Orders() {
       {/* Page header */}
       <div style={s.pageHeader}>
         <h1 style={s.pageTitle}>Ordrar</h1>
-        <span style={s.count}>{visible.length}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={s.count}>{visible.length}</span>
+          <button
+            onClick={loadOrders}
+            disabled={loading}
+            style={s.refreshBtn}
+            aria-label="Uppdatera ordrar">
+            {loading ? '…' : '↻'}
+          </button>
+        </div>
       </div>
 
       {/* Filter tabs */}
@@ -121,6 +137,19 @@ const s = {
     alignItems:  'center',
     gap:         10,
     marginBottom: 16,
+  },
+  refreshBtn: {
+    width:        32,
+    height:       32,
+    borderRadius: '50%',
+    border:       '0.5px solid rgba(10,10,10,.12)',
+    background:   '#fff',
+    fontSize:     16,
+    cursor:       'pointer',
+    display:      'flex',
+    alignItems:   'center',
+    justifyContent: 'center',
+    color:        '#1B36C9',
   },
   pageTitle: {
     fontFamily:    "'Space Grotesk', system-ui, sans-serif",
