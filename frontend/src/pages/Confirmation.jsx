@@ -170,7 +170,9 @@ export default function Confirmation() {
         </p>
         <div style={s.orderIdBadge}>
           <span style={s.orderIdLabel}>Order</span>
-          <span style={s.orderIdVal}>{order.orderId.slice(0, 8).toUpperCase()}</span>
+          <span style={s.orderIdVal}>
+            {order.merchantReference || order.orderId.slice(0, 8).toUpperCase()}
+          </span>
         </div>
       </div>
 
