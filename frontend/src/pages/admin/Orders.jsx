@@ -1,4 +1,3 @@
-
 import { useEffect, useState }                              from 'react';
 import { collection, query, orderBy, getDocs }             from 'firebase/firestore';
 import { useNavigate }                                       from 'react-router-dom';
@@ -106,7 +105,7 @@ export default function Orders() {
                   <div>
                     <p style={s.customerName}>{name}</p>
                     <p style={s.orderId}>
-                      {order.merchantReference || order.id.slice(0, 8).toUpperCase()}
+                      {order.shortRef || order.id.slice(0, 8).toUpperCase()}
                     </p>
                   </div>
                   <span style={{ ...s.statusBadge, background: sc.bg, color: sc.color }}>
