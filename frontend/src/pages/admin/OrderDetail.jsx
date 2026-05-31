@@ -146,10 +146,16 @@ export default function OrderDetail() {
 
       {/* Customer */}
       <InfoCard title="Kund">
-        <p style={s.infoRow}><span style={s.infoLabel}>Namn</span>
-          <span style={s.infoVal}>{order.customerName || '—'}</span></p>
-        <p style={s.infoRow}><span style={s.infoLabel}>E-post</span>
-          <span style={s.infoVal}>{order.customerEmail || '—'}</span></p>
+        {!order.customerEmail ? (
+          <p style={{ ...s.infoVal, color: 'rgba(10,10,10,.4)', fontStyle: 'italic' }}>
+            Kunduppgifter hämtas från Kustom — uppdateras inom en minut.
+          </p>
+        ) : (<>
+          <p style={s.infoRow}><span style={s.infoLabel}>Namn</span>
+            <span style={s.infoVal}>{order.customerName || '—'}</span></p>
+          <p style={s.infoRow}><span style={s.infoLabel}>E-post</span>
+            <span style={s.infoVal}>{order.customerEmail}</span></p>
+        </>)}
         <p style={s.infoRow}><span style={s.infoLabel}>Leverans</span>
           <span style={s.infoVal}>
             {order.deliveryMethod === 'delivery' ? 'Hemleverans' : 'Upphämtning vid träning'}
