@@ -130,7 +130,12 @@ export default function OrderDetail() {
         </span>
       </div>
 
-      <h1 style={s.orderId}>{order.id.slice(0, 8).toUpperCase()}</h1>
+      <h1 style={s.orderId}>
+        {order.merchantReference || order.id.slice(0, 8).toUpperCase()}
+      </h1>
+      {order.merchantReference && (
+        <p style={s.kustomRef}>Kustom: {order.id.slice(0, 8).toUpperCase()}</p>
+      )}
 
       {/* Status timeline */}
       {order.status !== 'avbruten' && (
@@ -305,6 +310,14 @@ const s = {
     fontSize:     11,
     fontWeight:   600,
     fontFamily:   "'Space Grotesk', system-ui, sans-serif",
+  },
+  kustomRef: {
+    fontFamily:  "'JetBrains Mono', monospace",
+    fontSize:    11,
+    color:       'rgba(10,10,10,.38)',
+    letterSpacing: '.5px',
+    marginTop:   2,
+    marginBottom: 12,
   },
   orderId: {
     fontFamily:    "'JetBrains Mono', monospace",
