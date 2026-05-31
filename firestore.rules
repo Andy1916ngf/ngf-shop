@@ -35,8 +35,9 @@ service cloud.firestore {
     }
 
     // ── Coupons ───────────────────────────────────────────────
+    // Admins can read and write; public has no access (prevents coupon discovery)
     match /coupons/{id} {
-      allow read, write: if false;
+      allow read, write: if isNgfAdmin();
     }
 
     // ── Static page content ───────────────────────────────────
@@ -66,4 +67,3 @@ service cloud.firestore {
     }
   }
 }
-
