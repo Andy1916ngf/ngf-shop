@@ -25,6 +25,7 @@ import Orders        from './pages/admin/Orders';
 import OrderDetail   from './pages/admin/OrderDetail';
 import Products      from './pages/admin/Products';
 import ProductEdit   from './pages/admin/ProductEdit';
+import Coupons       from './pages/admin/Coupons';
 import Settings      from './pages/admin/Settings';
 
 // ── PublicLayout ──────────────────────────────────────────────
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="produkter"     element={<Products />} />
           <Route path="produkter/ny"  element={<ProductEdit isNew />} />
           <Route path="produkter/:id" element={<ProductEdit />} />
+          <Route path="rabattkoder"   element={<Coupons />} />
 
           {/* siteAdmin only */}
           <Route element={<SiteAdminGuard />}>
