@@ -131,10 +131,10 @@ export default function OrderDetail() {
       </div>
 
       <h1 style={s.orderId}>
-        {order.merchantReference || order.id.slice(0, 8).toUpperCase()}
+        {order.shortRef || order.id.slice(0, 8).toUpperCase()}
       </h1>
-      {order.merchantReference && (
-        <p style={s.kustomRef}>Kustom: {order.id.slice(0, 8).toUpperCase()}</p>
+      {order.shortRef && (
+        <p style={s.kustomRef}>Kustom-ID: {order.id.slice(0, 8).toUpperCase()}</p>
       )}
 
       {/* Status timeline */}
