@@ -82,15 +82,9 @@ async function createOrder(data, context) {
 
   const subtotal = orderLines.reduce((s, l) => s + l.total_amount, 0);
 
-  // ── Merchant reference — NGFW series starting at 1916 ────────
-  const counterRef = db.doc('config/orderCounter');
-  const orderNum   = await db.runTransaction(async tx => {
-    const snap = await tx.get(counterRef);
-    const next = (snap.data()?.count || 1915) + 1;
-    tx.set(counterRef, { count: next }, { merge: true });
-    return next;
-  });
-  const merchantReference = `NGFW-${orderNum}`;
+  // ── Short reference (shown to customer and in Kustom portal) ─
+  // Generated before calling Kustom so it can be passed in the request.
+  const shortRef = db.collection('orders').doc().id.slice(0, 8).toUpperCase();
 
   // ── Shipping ─────────────────────────────────────────────
   let shippingCost = 0;
@@ -155,7 +149,8 @@ async function createOrder(data, context) {
     purchase_country:   'SE',
     purchase_currency:  'SEK',
     locale:             'sv-SE',
-    merchant_reference1: merchantReference,
+    merchant_reference1: shortRef,
+    merchant_reference2: 'NGFWEB',
     order_amount:      orderAmount,
     order_tax_amount:  orderLines
       .filter(l => l.tax_rate > 0)
@@ -175,8 +170,8 @@ async function createOrder(data, context) {
 
   // Persist order skeleton to Firestore
   await db.doc(`orders/${kustomOrder.order_id}`).set({
-    kustomOrderId:    kustomOrder.order_id,
-    merchantReference: merchantReference,
+    kustomOrderId: kustomOrder.order_id,
+    shortRef:      shortRef,
     status:           'beställd',
     kustomStatus:    'checkout_incomplete',
     customerEmail:   null,   // populated by kustomWebhook push
@@ -227,7 +222,7 @@ async function readOrder(data) {
   const order = snap.data();
   return {
     orderId:          orderId,
-    merchantReference: order.merchantReference || null,
+    shortRef:         order.shortRef || null,
     status:           order.status,
     items:            order.items,
     totalAmount:      order.totalAmount,
