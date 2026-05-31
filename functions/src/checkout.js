@@ -82,6 +82,16 @@ async function createOrder(data, context) {
 
   const subtotal = orderLines.reduce((s, l) => s + l.total_amount, 0);
 
+  // ── Merchant reference — NGFW series starting at 1916 ────────
+  const counterRef = db.doc('config/orderCounter');
+  const orderNum   = await db.runTransaction(async tx => {
+    const snap = await tx.get(counterRef);
+    const next = (snap.data()?.count || 1915) + 1;
+    tx.set(counterRef, { count: next }, { merge: true });
+    return next;
+  });
+  const merchantReference = `NGFW-${orderNum}`;
+
   // ── Shipping ─────────────────────────────────────────────
   let shippingCost = 0;
   let shippingRef  = 'pickup';
@@ -142,9 +152,10 @@ async function createOrder(data, context) {
     : process.env.SHOP_DOMAIN;
 
   const payload = {
-    purchase_country:  'SE',
-    purchase_currency: 'SEK',
-    locale:            'sv-SE',
+    purchase_country:   'SE',
+    purchase_currency:  'SEK',
+    locale:             'sv-SE',
+    merchant_reference1: merchantReference,
     order_amount:      orderAmount,
     order_tax_amount:  orderLines
       .filter(l => l.tax_rate > 0)
@@ -164,8 +175,9 @@ async function createOrder(data, context) {
 
   // Persist order skeleton to Firestore
   await db.doc(`orders/${kustomOrder.order_id}`).set({
-    kustomOrderId:   kustomOrder.order_id,
-    status:          'beställd',
+    kustomOrderId:    kustomOrder.order_id,
+    merchantReference: merchantReference,
+    status:           'beställd',
     kustomStatus:    'checkout_incomplete',
     customerEmail:   null,   // populated by kustomWebhook push
     customerName:    null,
