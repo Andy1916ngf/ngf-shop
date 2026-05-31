@@ -141,7 +141,9 @@ async function cancelOrder(data, context) {
   } else {
     // Full refund
     const capturesRes = await kustom.get(`/ordermanagement/v1/orders/${orderId}/captures`);
-    const captures = capturesRes.data.captures || [];
+    // Kustom returns either a single capture object or an array
+    const raw      = capturesRes.data;
+    const captures = Array.isArray(raw) ? raw : raw ? [raw] : [];
     for (const capture of captures) {
       await kustom.post(`/ordermanagement/v1/orders/${orderId}/refunds`, {
         refunded_amount: capture.captured_amount,
