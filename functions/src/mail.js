@@ -24,6 +24,7 @@ async function queueEmail(orderId, order, to, template) {
   };
 
   await admin.firestore().collection('mail').add({
+    from:    `Nynäshamns GF - Butiken <${SHOP_EMAIL}>`,
     to,
     message: {
       subject: subjects[template] || `Order ${ref}`,
