@@ -89,7 +89,9 @@ export default function Orders() {
                 <div style={s.cardTop}>
                   <div>
                     <p style={s.customerName}>{name}</p>
-                    <p style={s.orderId}>{order.id.slice(0, 8).toUpperCase()}</p>
+                    <p style={s.orderId}>
+                      {order.merchantReference || order.id.slice(0, 8).toUpperCase()}
+                    </p>
                   </div>
                   <span style={{ ...s.statusBadge, background: sc.bg, color: sc.color }}>
                     {STATUS_LABEL[order.status] || order.status}
