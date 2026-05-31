@@ -13,7 +13,9 @@ const SHOP_EMAIL  = process.env.ADMIN_EMAIL_GROUP || 'butiken@nynashamnsgf.se';
  * @param {string} template — new_order | order_receipt | confirmed | shipped | cancelled | dispute
  */
 async function queueEmail(orderId, order, to, template) {
-  const ref  = `#${orderId.slice(0, 8).toUpperCase()}`;
+  const ref  = order.merchantReference
+    ? order.merchantReference
+    : `#${orderId.slice(0, 8).toUpperCase()}`;
   const subjects = {
     new_order:     `Ny beställning — ${ref}`,
     order_receipt: `Tack för din beställning — ${ref}`,
