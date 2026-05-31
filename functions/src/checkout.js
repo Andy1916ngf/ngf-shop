@@ -226,17 +226,18 @@ async function readOrder(data) {
 
   const order = snap.data();
   return {
-    orderId:        orderId,
-    status:         order.status,
-    items:          order.items,
-    totalAmount:    order.totalAmount,
-    currency:       order.currency,
-    deliveryMethod: order.deliveryMethod,
-    shippingCost:   order.shippingCost,
-    discountAmount: order.discountAmount,
-    couponCode:     order.couponCode     || null,
-    customerName:   order.customerName   || null,
-    createdAt:      order.createdAt?.toMillis?.() || null,
+    orderId:          orderId,
+    merchantReference: order.merchantReference || null,
+    status:           order.status,
+    items:            order.items,
+    totalAmount:      order.totalAmount,
+    currency:         order.currency,
+    deliveryMethod:   order.deliveryMethod,
+    shippingCost:     order.shippingCost,
+    discountAmount:   order.discountAmount,
+    couponCode:       order.couponCode     || null,
+    customerName:     order.customerName   || null,
+    createdAt:        order.createdAt?.toMillis?.() || null,
   };
 }
 
