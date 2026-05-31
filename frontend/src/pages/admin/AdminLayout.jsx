@@ -2,7 +2,7 @@ import { useEffect, useState }                   from 'react';
 import { Outlet, NavLink, useNavigate }          from 'react-router-dom';
 import { signOut }                               from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { IconLayoutList, IconBox,
+import { IconLayoutList, IconBox, IconTag,
          IconSettings2, IconLogout }             from '@tabler/icons-react';
 import { auth, db }                              from '../../firebase';
 import { useAuth }                               from '../../hooks/useAuth';
@@ -35,10 +35,11 @@ export default function AdminLayout() {
   const isSiteAdmin = role === 'siteAdmin';
 
   const links = [
-    { to: '/admin/ordrar',          label: 'Ordrar',         Icon: IconLayoutList, badge: newOrders },
-    { to: '/admin/produkter',       label: 'Produkter',      Icon: IconBox },
+    { to: '/admin/ordrar',       label: 'Ordrar',       Icon: IconLayoutList, badge: newOrders },
+    { to: '/admin/produkter',    label: 'Produkter',    Icon: IconBox },
+    { to: '/admin/rabattkoder',  label: 'Rabattkoder',  Icon: IconTag },
     ...(isSiteAdmin ? [
-      { to: '/admin/installningar', label: 'Inställningar',  Icon: IconSettings2 },
+      { to: '/admin/installningar', label: 'Inställningar', Icon: IconSettings2 },
     ] : []),
   ];
 
