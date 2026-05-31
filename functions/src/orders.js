@@ -8,10 +8,13 @@ const db = admin.firestore();
 
 const kustom = axios.create({
   baseURL: process.env.KUSTOM_API_URL,
-  headers: {
-    Authorization:  `Basic ${process.env.KUSTOM_API_KEY}`,
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
+});
+
+kustom.interceptors.request.use(config => {
+  config.headers.Authorization =
+    `Basic ${Buffer.from(process.env.KUSTOM_API_KEY).toString('base64')}`;
+  return config;
 });
 
 /**
@@ -128,11 +131,14 @@ async function cancelOrder(data, context) {
 
   let newKustomStatus;
 
-  if (order.kustomStatus === 'authorized') {
+  // Treat anything other than captured/part_captured as an uncaptured reservation
+  const isCaptured = ['captured', 'part_captured'].includes(order.kustomStatus);
+
+  if (!isCaptured) {
     // Release the reservation — customer is not charged
     await kustom.post(`/ordermanagement/v1/orders/${orderId}/cancel`);
     newKustomStatus = 'cancelled';
-  } else if (order.kustomStatus === 'captured') {
+  } else {
     // Full refund
     const capturesRes = await kustom.get(`/ordermanagement/v1/orders/${orderId}/captures`);
     const captures = capturesRes.data.captures || [];
